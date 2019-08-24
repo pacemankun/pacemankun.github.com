@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Document</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />  
+    <style type="text/css">  
+        html{height:100%}    
+        body{height:100%;margin:0px;padding:0px}
+        #container{height:80%}
+    </style>
+    <script type="text/javascript" src="https://api.map.baidu.com/api?v=2.0&ak=1V8Zq0bTH5WFRhUlG8sGqLbWQs3TPPbW"></script>
+</head>
+<body>
+    <div id="container">我的</div>
+    <input type="button" value="结束追踪生成轨迹" />
+    <p style="font-size:12px">init</p>
+    <span>李宝宝这是第<mark></mark>次track你的位置</span> 
+    <script>
+    if(navigator.geolocation){
+        var w1=navigator.geolocation.watchPosition(success,error,{
+            // 指示浏览器获取高精度的位置,默认为false
+            enableHighAccuracy: true,
+            // 指定获取地理位置的超时时间,默认不限时,单位为毫秒
+            timeout: 5000,
+            // 最长有效期,在重复获取地理位置时,此参数指定多久再次获取位置
+            maximumAge: 3000});
+        function speedz(n){
+            var n=Math.round(n);
+            if(n==0){
+                return '你倒是动起来啊'
+            }else if(n>0&&n<90){
+                return '北偏东'+n+'度';
+            }else if(n==90){
+                return '正东';
+            }else if(n>90&&n<180){
+                return '东偏南'+n%90+'度';
+            }else if(n==180){
+                return '正南';
+            }else if(n>180&&n<270){
+                return '南偏西'+n%180+'度';
+            }else if(n==270){
+                return '正西';
+            }else if(n>270&&n<360){
+                return '西偏北'+n%270+'度';
+            }
+        }
+        var stard=new Date;
+        var count=0;//记录获取位置的总次数
+        var cunxian=[];//保存每次获得的转换好的坐标点留着给折线用
+
+        document.querySelector('input').onclick=function(){
+            this.value='去刷新页面重启追踪';
+            navigator.geolocation.clearWatch(w1);
+            var zd=(new Date-stard)/1000;//追踪总耗时s
+            var hs=Math.floor(zd/3600);
+            zd%=3600;
+            var ms=Math.floor(zd/60);
+            zd%=60;
+            var ss=Math.ceil(zd);
+            document.querySelector('p').innerHTML=`此次追踪共计用时:${hs}时${ms}分${ss}秒`;
+            map.clearOverlays();//清除地图上最新点,为了清晰显示生成的轨迹
+
+            //生成轨迹         
+            var polyline = new BMap.Polyline(cunxian,{strokeColor:"lightgreen", strokeWeight:6, strokeOpacity:0.5});// 创建polyline对象
+            map.addOverlay(polyline);//地图上添加折线polyline
+        };
+
+        //初始化地图
+        var map = new BMap.Map("container");          // 创建地图实例  
+        var point = new BMap.Point(116.404, 39.915);  // 创建地图中心点坐标 (看不到点)
+        map.centerAndZoom(point, 15);                 // 设置地图中心点坐标和地图缩放级别
+        var marker = new BMap.Marker(point);        // 创建标注点 (可见点)   
+        map.addOverlay(marker);                     // 将标注点添加到地图中 
+        marker.setAnimation(BMAP_ANIMATION_BOUNCE); //让标注点跳动动画        
+
+        map.enableDragging();                //开启地图拖拽 
+        map.enablePinchToZoom();             //开启双指缩放
+        map.enableScrollWheelZoom();        //开启鼠标滚轮缩放 
+        marker.enableDragging();            //开启标注点的拖拽功能
+
+        // 控件
+        map.addControl(new BMap.NavigationControl({type: BMAP_NAVIGATION_CONTROL_SMALL}));//平移缩放控件控件(选项)
+        map.addControl(new BMap.ScaleControl({anchor:BMAP_ANCHOR_TOP_LEFT,offset: new BMap.Size(55, 25)}));//比例尺控件(选项位置)
+        map.addControl(new BMap.MapTypeControl()); //切换地图模式控件
+    }
+    else{
+        document.write('geolocation is not supported by this browser<br />');
+    }        
+
+    function success(position){
+        var qj=position.coords.longitude;
+        var qw=position.coords.latitude;
+        var speedc='侦测到你的速度:'+position.coords.speed*3.6+'km/h';
+        var headingc='已锁定你的逃窜方向:'+speedz(position.coords.heading);
+        document.querySelector('p').innerHTML=speedc+'<br />'+headingc;//更新每次获取位置的方向与速度
+        count++;//持续获取位置的次数
+        document.querySelector('mark').innerHTML=count;
+        map.clearOverlays()//清除地图上原有的全部点,实时创建最新点显示位置
+
+
+        //坐标转换
+        var qPoint = new BMap.Point(qj,qw);//gps点
+        console.log('gps:'+qPoint);//测试        
+        var pointArr = [];
+        pointArr.push(qPoint);
+        var convertor = new BMap.Convertor();//坐标转换功能实例
+        convertor.translate(pointArr, 1, 5, translateCallback)//转换中
+
+        function translateCallback(data){//转换done
+            if(data.status == 0) {
+                console.log('bd:'+data.points[0]);//测试
+                cunxian.push(data.points[0])//保存每次获得的转换好的坐标点留着给折线用
+                var marker = new BMap.Marker(data.points[0]);//创bd点
+                map.addOverlay(marker);//加bd点
+                marker.setAnimation(BMAP_ANIMATION_BOUNCE); //让标注点跳动动画                
+                var label = new BMap.Label('目标已锁定,发射导弹',{offset:new BMap.Size(20,-10)});//创label
+                marker.setLabel(label); //加label
+                map.setCenter(data.points[0]);//把地图中心拉回bd点
+            }else{
+                var errStatus={
+                    1:'内部错误',
+                    4:'转换失败',
+                    21:'from非法',
+                    22:'to非法',
+                    24:'coords格式非法',
+                    25:'coords个数非法，超过限制',
+                    26:'参数错误',
+                }
+                document.title=errStatus[data.status];
+            }
+        }
+    }
+    function error(err){
+        var ec=err.code;
+        switch(ec){
+            case 1:  
+                document.title=`你自己点的拒绝`;
+            break;
+            case 2:
+                navigator.onLine?document.title='定位卫星失联':document.title='你家断网';
+            break;
+            case 3:
+                document.title=`你在深山老林,我用5秒找你不见致超时`;
+            break;
+            default:
+                document.title=`未知错误`;
+        }
+    }
+    </script>
+</body>
+</html>

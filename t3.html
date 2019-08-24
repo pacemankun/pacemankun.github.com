@@ -1,0 +1,82 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+  <style type="text/css">
+    body, html,#allmap {width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
+  </style>
+<title>浏览器定位</title>
+</head>
+<body>
+</body>
+</html>
+<script>
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(success,error,{
+            // 指示浏览器获取高精度的位置,默认为false
+            enableHighAccuracy: true,
+            // 指定获取地理位置的超时时间,默认不限时,单位为毫秒
+            timeout: 5000,
+            // 最长有效期,在重复获取地理位置时,此参数指定多久再次获取位置
+            maximumAge: 3000});
+
+            function speedz(n){
+                var n=Math.round(n);
+                if(n==0){
+                    return '你倒是动起来啊'
+                }else if(n>0&&n<90){
+                    return '北偏东'+n+'度';
+                }else if(n==90){
+                    return '正东';
+                }else if(n>90&&n<180){
+                    return '东偏南'+n%90+'度';
+                }else if(n==180){
+                    return '正南';
+                }else if(n>180&&n<270){
+                    return '南偏西'+n%180+'度';
+                }else if(n==270){
+                    return '正西';
+                }else if(n>270&&n<360){
+                    return '西偏北'+n%270+'度';
+                }
+            }        
+    }
+    else{
+        document.write('geolocation is not supported by this browser<br />');
+    }        
+    function success(position){
+        var map1=new Map;
+        var coo=position.coords;
+        map1.set('纬度',JSON.stringify(coo.latitude));
+        map1.set('经度',JSON.stringify(coo.longitude));
+        map1.set('位置精度',JSON.stringify(coo.accuracy+'米'));
+        map1.set('获取时间',JSON.stringify(new Date().toLocaleString()));  // coo.timestamp总是获取不到改用new Date()   
+          
+        map1.set('海拔',JSON.stringify(coo.altitude+'米'));
+        map1.set('海拔精度',JSON.stringify(coo.altitudeAccurancy+'米'));
+        map1.set('已锁定你的逃窜方向',JSON.stringify(speedz(coo.heading)));
+        map1.set('速度',JSON.stringify(coo.speed*3.6+'km/h'));
+
+        for(var item of map1){
+            document.write(`${item[0]}:${eval(item[1])}<hr />`);//JSON.parse(undefined)报错！改用eval()
+        }
+    }
+    function error(err){
+        var ec=err.code;
+        switch(ec){
+            case 1:  
+                document.write(`你自己点的拒绝`);
+            break;
+            case 2:
+                navigator.onLine?document.write('定位卫星失联'):document.write('你家断网');
+            break;
+            case 3:
+                document.write(`你在深山老林,我用5秒找你不见致超时`);
+            break;
+            default:
+                document.write(`未知错误`);
+        }
+    }
+</script>
+
+
